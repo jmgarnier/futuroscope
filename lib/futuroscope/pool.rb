@@ -19,7 +19,6 @@ module Futuroscope
       @queue = Queue.new
       @workers = Set.new
       @mutex = Mutex.new
-      warm_up_workers
     end
 
     # Public: Enqueues a new Future into the pool.
@@ -27,7 +26,9 @@ module Futuroscope
     # future - The Future to enqueue.
     def queue(future)
       @mutex.synchronize do
+        spin_default_workers_on_demand_to_test_segfault
         spin_worker if can_spin_extra_workers?
+
         @queue.push future
       end
     end
@@ -55,16 +56,13 @@ module Futuroscope
 
     def min_workers=(count)
       @min_workers = count
-      warm_up_workers
     end
 
     private
 
-    def warm_up_workers
-      @mutex.synchronize do
-        while(@workers.length < @min_workers) do
-          spin_worker
-        end
+    def spin_default_workers_on_demand_to_test_segfault
+      while(@workers.length < @min_workers) do
+        spin_worker
       end
     end
 
